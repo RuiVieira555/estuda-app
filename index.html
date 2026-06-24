@@ -122,6 +122,43 @@
     margin-top:6px;
   }
 
+  .upload-row{
+    margin-top:10px;
+  }
+  .btn-upload{
+    width:100%;
+    background:none;
+    border:1px dashed var(--line);
+    color:var(--muted);
+    border-radius:12px;
+    padding:11px 14px;
+    font-size:13.5px;
+    font-weight:600;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+  }
+  .btn-upload:active{ background:var(--surface-2); }
+  .btn-upload:disabled{ opacity:0.5; cursor:not-allowed; }
+  .btn-upload .filename{
+    color:var(--text);
+    font-weight:400;
+    max-width:60%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .upload-status{
+    font-family:"JetBrains Mono",monospace;
+    font-size:11.5px;
+    color:var(--muted);
+    margin-top:6px;
+    text-align:center;
+  }
+  .upload-status.error{ color:var(--danger); }
+
   .actions{
     display:flex;
     gap:10px;
@@ -363,6 +400,15 @@
   <div class="card">
     <textarea id="notesInput" placeholder="Cola aqui os teus apontamentos, slides ou anotações…"></textarea>
     <div class="char-count mono"><span id="charCount">0</span> caracteres</div>
+
+    <div class="upload-row">
+      <input type="file" id="pdfInput" accept="application/pdf" hidden />
+      <button class="btn-upload" id="btnUploadPdf" type="button">
+        <span id="uploadLabel">📄 Carregar PDF</span>
+      </button>
+      <div class="upload-status" id="uploadStatus"></div>
+    </div>
+
     <div class="actions">
       <button class="primary btn-amber" id="btnSummary">Resumir</button>
       <button class="primary btn-teal" id="btnQuestions">Gerar perguntas</button>
@@ -422,6 +468,13 @@
   </div>
 </dialog>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  if (window.pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  }
+</script>
 <script>
   const STORAGE_KEY = "estuda_backend_url";
   const SECRET_KEY = "estuda_app_secret";
@@ -436,6 +489,10 @@
   // ---- Elements ----
   const notesInput = document.getElementById("notesInput");
   const charCount = document.getElementById("charCount");
+  const pdfInput = document.getElementById("pdfInput");
+  const btnUploadPdf = document.getElementById("btnUploadPdf");
+  const uploadLabel = document.getElementById("uploadLabel");
+  const uploadStatus = document.getElementById("uploadStatus");
   const btnSummary = document.getElementById("btnSummary");
   const btnQuestions = document.getElementById("btnQuestions");
   const statusBox = document.getElementById("statusBox");
@@ -481,6 +538,70 @@
   // ---- Char count ----
   notesInput.addEventListener("input", () => {
     charCount.textContent = notesInput.value.length;
+  });
+
+  // ---- Upload de PDF ----
+  const MAX_PDF_PAGES = 60;
+  const MAX_EXTRACTED_CHARS = 50000;
+
+  btnUploadPdf.addEventListener("click", () => pdfInput.click());
+
+  pdfInput.addEventListener("change", async () => {
+    const file = pdfInput.files[0];
+    if (!file) return;
+
+    if (!window.pdfjsLib) {
+      uploadStatus.textContent = "Não foi possível carregar o leitor de PDF. Verifica a ligação à internet.";
+      uploadStatus.classList.add("error");
+      return;
+    }
+
+    btnUploadPdf.disabled = true;
+    uploadStatus.classList.remove("error");
+    uploadLabel.textContent = `⏳ A ler "${file.name}"…`;
+    uploadStatus.textContent = "";
+
+    try {
+      const buffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+      const pageCount = Math.min(pdf.numPages, MAX_PDF_PAGES);
+
+      let fullText = "";
+      for (let pageNum = 1; pageNum <= pageCount; pageNum++) {
+        uploadLabel.textContent = `⏳ Página ${pageNum} de ${pageCount}…`;
+        const page = await pdf.getPage(pageNum);
+        const content = await page.getTextContent();
+        const pageText = content.items.map((item) => item.str).join(" ");
+        fullText += pageText + "\n\n";
+      }
+
+      fullText = fullText.trim();
+      let truncatedNotice = "";
+      if (fullText.length > MAX_EXTRACTED_CHARS) {
+        fullText = fullText.slice(0, MAX_EXTRACTED_CHARS);
+        truncatedNotice = " (texto cortado por ser muito longo)";
+      }
+      if (pdf.numPages > MAX_PDF_PAGES) {
+        truncatedNotice += ` (só as primeiras ${MAX_PDF_PAGES} páginas de ${pdf.numPages})`;
+      }
+
+      if (!fullText) {
+        uploadStatus.textContent =
+          "Não consegui extrair texto deste PDF — pode ser um PDF de imagens/digitalizado.";
+        uploadStatus.classList.add("error");
+      } else {
+        notesInput.value = fullText;
+        charCount.textContent = notesInput.value.length;
+        uploadStatus.textContent = `"${file.name}" carregado${truncatedNotice}.`;
+      }
+    } catch (err) {
+      uploadStatus.textContent = "Não foi possível ler este PDF. Tenta outro ficheiro.";
+      uploadStatus.classList.add("error");
+    } finally {
+      uploadLabel.textContent = "📄 Carregar PDF";
+      btnUploadPdf.disabled = false;
+      pdfInput.value = "";
+    }
   });
 
   // ---- Settings ----
