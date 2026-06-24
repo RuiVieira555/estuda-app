@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#14181F" />
+<title>Estuda</title>
+<link rel="manifest" href="./manifest.json" />
+<link rel="icon" href="./icon-192.png" />
+<link rel="apple-touch-icon" href="./icon-192.png" />
+<style>
+  :root{
+    --bg:#14181F;
+    --surface:#1C2230;
+    --surface-2:#242B3B;
+    --line:#323B4F;
+    --text:#E8E6E1;
+    --muted:#8B92A1;
+    --amber:#E8A33D;
+    --amber-ink:#14181F;
+    --teal:#4FB8A8;
+    --danger:#E2664B;
+    --radius:18px;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:"IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+    min-height:100vh;
+    min-height:100dvh;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mono{
+    font-family:"JetBrains Mono","SFMono-Regular",Menlo,Consolas,monospace;
+  }
+
+  .app{
+    max-width:560px;
+    margin:0 auto;
+    padding:env(safe-area-inset-top,0) 18px calc(env(safe-area-inset-bottom,0) + 24px);
+    display:flex;
+    flex-direction:column;
+    min-height:100vh;
+    min-height:100dvh;
+  }
+
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:22px 0 16px;
+  }
+
+  .brand{
+    display:flex;
+    align-items:baseline;
+    gap:8px;
+  }
+  .brand .index{
+    font-family:"JetBrains Mono",monospace;
+    color:var(--amber);
+    font-size:13px;
+    letter-spacing:0.08em;
+  }
+  .brand h1{
+    margin:0;
+    font-size:22px;
+    font-weight:700;
+    letter-spacing:-0.01em;
+  }
+
+  .gear{
+    background:none;
+    border:1px solid var(--line);
+    color:var(--muted);
+    width:38px;
+    height:38px;
+    border-radius:11px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+  }
+  .gear:active{ background:var(--surface); }
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:16px;
+  }
+
+  textarea{
+    width:100%;
+    min-height:140px;
+    resize:vertical;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:12px;
+    color:var(--text);
+    padding:14px;
+    font-size:15px;
+    font-family:inherit;
+    line-height:1.5;
+  }
+  textarea:focus, button:focus-visible, .gear:focus-visible{
+    outline:2px solid var(--teal);
+    outline-offset:2px;
+  }
+  textarea::placeholder{ color:var(--muted); }
+
+  .char-count{
+    font-family:"JetBrains Mono",monospace;
+    font-size:11px;
+    color:var(--muted);
+    text-align:right;
+    margin-top:6px;
+  }
+
+  .actions{
+    display:flex;
+    gap:10px;
+    margin-top:14px;
+  }
+
+  button.primary{
+    flex:1;
+    border:none;
+    border-radius:12px;
+    padding:13px 14px;
+    font-size:14.5px;
+    font-weight:600;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+  }
+  .btn-amber{ background:var(--amber); color:var(--amber-ink); }
+  .btn-teal{ background:var(--teal); color:#0F231F; }
+  button.primary:disabled{ opacity:0.5; cursor:not-allowed; }
+  button.primary:active:not(:disabled){ transform:translateY(1px); }
+
+  .tabs{
+    display:flex;
+    gap:6px;
+    margin:20px 0 14px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:4px;
+  }
+  .tab{
+    flex:1;
+    text-align:center;
+    padding:9px 0;
+    border-radius:10px;
+    font-size:13.5px;
+    font-weight:600;
+    color:var(--muted);
+    cursor:pointer;
+    user-select:none;
+  }
+  .tab.active{
+    background:var(--surface-2);
+    color:var(--text);
+  }
+
+  .panel{ display:none; flex:1; }
+  .panel.active{ display:flex; flex-direction:column; gap:14px; }
+
+  .empty{
+    color:var(--muted);
+    font-size:14px;
+    text-align:center;
+    padding:40px 14px;
+    border:1px dashed var(--line);
+    border-radius:var(--radius);
+  }
+
+  .summary-text{
+    font-size:15px;
+    line-height:1.65;
+    white-space:pre-wrap;
+  }
+
+  /* Flashcard */
+  .deck{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:16px;
+  }
+  .progress{
+    font-family:"JetBrains Mono",monospace;
+    font-size:12px;
+    color:var(--muted);
+    letter-spacing:0.05em;
+  }
+
+  .flashcard{
+    width:100%;
+    aspect-ratio: 4/3;
+    max-height:320px;
+    perspective:1200px;
+    cursor:pointer;
+  }
+  .flashcard-inner{
+    position:relative;
+    width:100%;
+    height:100%;
+    transition:transform 0.5s cubic-bezier(.2,.8,.2,1);
+    transform-style:preserve-3d;
+  }
+  .flashcard.flipped .flashcard-inner{
+    transform:rotateY(180deg);
+  }
+  .face{
+    position:absolute;
+    inset:0;
+    backface-visibility:hidden;
+    border-radius:var(--radius);
+    padding:24px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    text-align:center;
+    gap:10px;
+  }
+  .face-front{
+    background:var(--amber);
+    color:var(--amber-ink);
+    border:1px solid #c98a2c;
+  }
+  .face-back{
+    background:var(--teal);
+    color:#0F231F;
+    transform:rotateY(180deg);
+    border:1px solid #38a292;
+  }
+  .face-label{
+    font-family:"JetBrains Mono",monospace;
+    font-size:11px;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    opacity:0.65;
+  }
+  .face-text{
+    font-size:17px;
+    font-weight:600;
+    line-height:1.4;
+  }
+  .face-hint{
+    font-size:11.5px;
+    opacity:0.6;
+    margin-top:4px;
+  }
+
+  .deck-nav{
+    display:flex;
+    align-items:center;
+    gap:14px;
+  }
+  .nav-btn{
+    background:var(--surface);
+    border:1px solid var(--line);
+    color:var(--text);
+    width:42px;
+    height:42px;
+    border-radius:12px;
+    font-size:18px;
+    cursor:pointer;
+  }
+  .nav-btn:disabled{ opacity:0.35; cursor:not-allowed; }
+
+  .status{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    color:var(--muted);
+    font-size:13.5px;
+    padding:10px 2px;
+  }
+  .spinner{
+    width:16px; height:16px;
+    border-radius:50%;
+    border:2px solid var(--line);
+    border-top-color:var(--amber);
+    animation:spin 0.8s linear infinite;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  .error-box{
+    background:rgba(226,102,75,0.12);
+    border:1px solid var(--danger);
+    color:#F3B6A6;
+    border-radius:12px;
+    padding:12px 14px;
+    font-size:13.5px;
+  }
+
+  dialog{
+    width:min(420px, 92vw);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    background:var(--surface);
+    color:var(--text);
+    padding:20px;
+  }
+  dialog::backdrop{ background:rgba(0,0,0,0.55); }
+  dialog h2{ margin:0 0 4px; font-size:17px; }
+  dialog p{ color:var(--muted); font-size:13px; margin:0 0 16px; line-height:1.5; }
+  dialog label{ font-size:12.5px; color:var(--muted); display:block; margin-bottom:6px; }
+  dialog input{
+    width:100%;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:10px;
+    color:var(--text);
+    padding:11px 12px;
+    font-size:14px;
+    margin-bottom:16px;
+    font-family:"JetBrains Mono",monospace;
+  }
+  .dialog-actions{ display:flex; gap:10px; justify-content:flex-end; }
+  .btn-ghost{
+    background:none;
+    border:1px solid var(--line);
+    color:var(--text);
+    border-radius:10px;
+    padding:10px 16px;
+    font-size:13.5px;
+    cursor:pointer;
+  }
+
+  footer{
+    margin-top:auto;
+    padding-top:24px;
+    text-align:center;
+    font-size:11px;
+    color:var(--muted);
+    font-family:"JetBrains Mono",monospace;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="brand">
+      <span class="index mono">01</span>
+      <h1>Estuda</h1>
+    </div>
+    <button class="gear" id="settingsBtn" aria-label="Configurar ligação à IA" title="Configurar ligação à IA">⚙</button>
+  </header>
+
+  <div class="card">
+    <textarea id="notesInput" placeholder="Cola aqui os teus apontamentos, slides ou anotações…"></textarea>
+    <div class="char-count mono"><span id="charCount">0</span> caracteres</div>
+    <div class="actions">
+      <button class="primary btn-amber" id="btnSummary">Resumir</button>
+      <button class="primary btn-teal" id="btnQuestions">Gerar perguntas</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="summary">Resumo</div>
+    <div class="tab" data-tab="questions">Perguntas</div>
+  </div>
+
+  <div id="statusBox"></div>
+
+  <div class="panel active" id="panel-summary">
+    <div class="empty" id="summaryEmpty">Ainda não geraste nenhum resumo.<br/>Cola os apontamentos acima e toca em "Resumir".</div>
+    <div class="card summary-text" id="summaryContent" style="display:none;"></div>
+  </div>
+
+  <div class="panel" id="panel-questions">
+    <div class="empty" id="questionsEmpty">Ainda não geraste perguntas.<br/>Cola os apontamentos acima e toca em "Gerar perguntas".</div>
+    <div class="deck" id="deck" style="display:none;">
+      <div class="progress mono" id="deckProgress"></div>
+      <div class="flashcard" id="flashcard">
+        <div class="flashcard-inner">
+          <div class="face face-front">
+            <span class="face-label">Pergunta</span>
+            <div class="face-text" id="cardFront"></div>
+            <span class="face-hint">toca para ver a resposta</span>
+          </div>
+          <div class="face face-back">
+            <span class="face-label">Resposta</span>
+            <div class="face-text" id="cardBack"></div>
+            <span class="face-hint">toca para voltar</span>
+          </div>
+        </div>
+      </div>
+      <div class="deck-nav">
+        <button class="nav-btn" id="prevCard" aria-label="Anterior">←</button>
+        <button class="nav-btn" id="nextCard" aria-label="Seguinte">→</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>estuda · funciona offline · dados ficam no teu telemóvel</footer>
+</div>
+
+<dialog id="settingsDialog">
+  <h2>Ligação à IA</h2>
+  <p>Define o endereço do teu backend (ex: um Cloudflare Worker) que faz a chamada à API com a tua key em segurança, e o código de acesso partilhado. Isto fica guardado só neste telemóvel.</p>
+  <label for="endpointInput">URL do backend</label>
+  <input id="endpointInput" type="url" placeholder="https://o-teu-worker.workers.dev" />
+  <label for="secretInput">Código de acesso</label>
+  <input id="secretInput" type="password" placeholder="o código partilhado pelo administrador" />
+  <div class="dialog-actions">
+    <button class="btn-ghost" id="cancelSettings">Cancelar</button>
+    <button class="primary btn-amber" id="saveSettings" style="flex:none; padding:10px 18px;">Guardar</button>
+  </div>
+</dialog>
+
+<script>
+  const STORAGE_KEY = "estuda_backend_url";
+  const SECRET_KEY = "estuda_app_secret";
+
+  // ---- Service worker ----
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./sw.js").catch(() => {});
+    });
+  }
+
+  // ---- Elements ----
+  const notesInput = document.getElementById("notesInput");
+  const charCount = document.getElementById("charCount");
+  const btnSummary = document.getElementById("btnSummary");
+  const btnQuestions = document.getElementById("btnQuestions");
+  const statusBox = document.getElementById("statusBox");
+
+  const tabs = document.querySelectorAll(".tab");
+  const panels = {
+    summary: document.getElementById("panel-summary"),
+    questions: document.getElementById("panel-questions"),
+  };
+
+  const summaryEmpty = document.getElementById("summaryEmpty");
+  const summaryContent = document.getElementById("summaryContent");
+
+  const questionsEmpty = document.getElementById("questionsEmpty");
+  const deck = document.getElementById("deck");
+  const deckProgress = document.getElementById("deckProgress");
+  const flashcard = document.getElementById("flashcard");
+  const cardFront = document.getElementById("cardFront");
+  const cardBack = document.getElementById("cardBack");
+  const prevCard = document.getElementById("prevCard");
+  const nextCard = document.getElementById("nextCard");
+
+  const settingsBtn = document.getElementById("settingsBtn");
+  const settingsDialog = document.getElementById("settingsDialog");
+  const endpointInput = document.getElementById("endpointInput");
+  const secretInput = document.getElementById("secretInput");
+  const saveSettings = document.getElementById("saveSettings");
+  const cancelSettings = document.getElementById("cancelSettings");
+
+  let questions = [];
+  let currentIndex = 0;
+
+  // ---- Tabs ----
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      tabs.forEach((t) => t.classList.remove("active"));
+      tab.classList.add("active");
+      Object.values(panels).forEach((p) => p.classList.remove("active"));
+      panels[tab.dataset.tab].classList.add("active");
+    });
+  });
+
+  // ---- Char count ----
+  notesInput.addEventListener("input", () => {
+    charCount.textContent = notesInput.value.length;
+  });
+
+  // ---- Settings ----
+  function getBackendUrl() {
+    return localStorage.getItem(STORAGE_KEY) || "";
+  }
+  function getAppSecret() {
+    return localStorage.getItem(SECRET_KEY) || "";
+  }
+  settingsBtn.addEventListener("click", () => {
+    endpointInput.value = getBackendUrl();
+    secretInput.value = getAppSecret();
+    settingsDialog.showModal();
+  });
+  cancelSettings.addEventListener("click", () => settingsDialog.close());
+  saveSettings.addEventListener("click", () => {
+    localStorage.setItem(STORAGE_KEY, endpointInput.value.trim());
+    localStorage.setItem(SECRET_KEY, secretInput.value.trim());
+    settingsDialog.close();
+  });
+
+  // ---- Status / errors ----
+  function setLoading(message) {
+    statusBox.innerHTML = `<div class="status"><div class="spinner"></div><span>${message}</span></div>`;
+  }
+  function setError(message) {
+    statusBox.innerHTML = `<div class="error-box">${message}</div>`;
+  }
+  function clearStatus() {
+    statusBox.innerHTML = "";
+  }
+
+  // ---- Backend call ----
+  async function callBackend(mode, text) {
+    const url = getBackendUrl();
+    if (!url) {
+      throw new Error("Ainda não configuraste o backend. Toca no ⚙ no topo para definir o endereço.");
+    }
+    const res = await fetch(url.replace(/\/$/, "") + "/api/study", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-App-Secret": getAppSecret(),
+      },
+      body: JSON.stringify({ mode, text }),
+    });
+    if (res.status === 401) {
+      throw new Error("Código de acesso inválido. Confirma-o nas definições (⚙).");
+    }
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      throw new Error(`O backend respondeu com erro (${res.status}). ${errText}`.trim());
+    }
+    return res.json();
+  }
+
+  // ---- Summary ----
+  btnSummary.addEventListener("click", async () => {
+    const text = notesInput.value.trim();
+    if (!text) {
+      setError("Cola primeiro algum texto para resumir.");
+      return;
+    }
+    tabs[0].click();
+    btnSummary.disabled = true;
+    btnQuestions.disabled = true;
+    setLoading("A gerar resumo…");
+    try {
+      const data = await callBackend("summary", text);
+      summaryEmpty.style.display = "none";
+      summaryContent.style.display = "block";
+      summaryContent.textContent = data.summary || "Sem conteúdo na resposta.";
+      clearStatus();
+    } catch (err) {
+      setError(err.message || "Ocorreu um erro a gerar o resumo.");
+    } finally {
+      btnSummary.disabled = false;
+      btnQuestions.disabled = false;
+    }
+  });
+
+  // ---- Questions ----
+  btnQuestions.addEventListener("click", async () => {
+    const text = notesInput.value.trim();
+    if (!text) {
+      setError("Cola primeiro algum texto para gerar perguntas.");
+      return;
+    }
+    tabs[1].click();
+    btnSummary.disabled = true;
+    btnQuestions.disabled = true;
+    setLoading("A gerar perguntas…");
+    try {
+      const data = await callBackend("questions", text);
+      questions = Array.isArray(data.questions) ? data.questions : [];
+      if (!questions.length) {
+        throw new Error("Não vieram perguntas na resposta.");
+      }
+      currentIndex = 0;
+      questionsEmpty.style.display = "none";
+      deck.style.display = "flex";
+      renderCard();
+      clearStatus();
+    } catch (err) {
+      setError(err.message || "Ocorreu um erro a gerar as perguntas.");
+    } finally {
+      btnSummary.disabled = false;
+      btnQuestions.disabled = false;
+    }
+  });
+
+  function renderCard() {
+    const q = questions[currentIndex];
+    cardFront.textContent = q.question;
+    cardBack.textContent = q.answer;
+    flashcard.classList.remove("flipped");
+    deckProgress.textContent = `${currentIndex + 1} / ${questions.length}`;
+    prevCard.disabled = currentIndex === 0;
+    nextCard.disabled = currentIndex === questions.length - 1;
+  }
+
+  flashcard.addEventListener("click", () => {
+    flashcard.classList.toggle("flipped");
+  });
+  prevCard.addEventListener("click", () => {
+    if (currentIndex > 0) {
+      currentIndex--;
+      renderCard();
+    }
+  });
+  nextCard.addEventListener("click", () => {
+    if (currentIndex < questions.length - 1) {
+      currentIndex++;
+      renderCard();
+    }
+  });
+</script>
+</body>
+</html>
